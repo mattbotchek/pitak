@@ -1,0 +1,24 @@
+# Ignore standard build directories
+[Bb]uild/
+out/
+
+# Ignore IDE-specific CMake build folders
+cmake-build-*/
+.cache/
+
+# Ignore specific CMake generated artifacts if built in-source
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# Ignore user-specific IDE settings
+*.user
+.idea/
+.vscode/
