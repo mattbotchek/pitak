@@ -8,8 +8,18 @@ set(CMAKE_AUTOUIC ON)
 find_package(Qt6 REQUIRED COMPONENTS 
     Quick 
     Qml
-    VirtualKeyboard
 )
+
+find_library(PIGPIO_LIBRARY NAMES pigpio libpigpio)
+if(NOT PIGPIO_LIBRARY)
+    find_library(PIGPIOD_IF2_LIBRARY NAMES pigpiod_if2 libpigpiod_if2)
+    if(NOT PIGPIOD_IF2_LIBRARY)
+        message(FATAL_ERROR "Could not find a pigpio library (tried pigpio and pigpiod_if2)")
+    endif()
+    set(PIGPIO_LINK_LIBRARY ${PIGPIOD_IF2_LIBRARY})
+else()
+    set(PIGPIO_LINK_LIBRARY ${PIGPIO_LIBRARY})
+endif()
 
 add_executable(pitak
     main.cpp
@@ -21,8 +31,7 @@ add_executable(pitak
 target_link_libraries(pitak PRIVATE
     Qt6::Quick
     Qt6::Qml
-    Qt6::VirtualKeyboard
-    /usr/local/lib/libpigpiod_if2.so
+    ${PIGPIO_LINK_LIBRARY}
     rt
     pthread
 )

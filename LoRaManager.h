@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QVariantList>
+#include <QByteArray>
 #include <QTimer>
 #include "sx126x.h"
 
@@ -22,6 +23,7 @@ private:
     SX126X *radio;
     QTimer *rxTimer;
     QVariantList m_messages;
+    QByteArray m_rxBuffer;
 
     void appendMessage(const QString &msg);
 };

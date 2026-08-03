@@ -22,6 +22,31 @@ ApplicationWindow {
         height: 100
         color: "#112B3C"
 
+        Button {
+            id: exitButton
+            anchors.top: parent.top
+            anchors.right: parent.right
+            anchors.margins: 12
+            text: "✕"
+            width: 42
+            height: 42
+            font.pixelSize: 18
+            contentItem: Text {
+                text: exitButton.text
+                anchors.centerIn: parent
+                color: "#A8C7E6"
+                font.pixelSize: exitButton.font.pixelSize
+                font.bold: true
+            }
+            background: Rectangle {
+                radius: 8
+                color: "#1F3A52"
+                border.color: "#4A90E2"
+                border.width: 2
+            }
+            onClicked: Qt.quit()
+        }
+
         Row {
             anchors.fill: parent
             anchors.margins: 10
@@ -127,13 +152,6 @@ ApplicationWindow {
                 }
             }
 
-            Button {
-                text: "Exit PiTAK"
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottomMargin: 30
-                onClicked: Qt.quit()
-            }
         }
     }
 }

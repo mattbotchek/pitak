@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import QtQuick.VirtualKeyboard 2.15
 
 Rectangle {
     id: root
@@ -13,119 +12,140 @@ Rectangle {
     property var lora
     property var stack
 
-    Item {
-        id: contentHost
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: parent.height
-        y: keyboard.active ? -Math.min(260, keyboard.height - 40) : 0
+    function sendCurrentMessage() {
+        if (!lora || !input.text || input.text.trim().length === 0)
+            return;
 
-        Behavior on y {
-            NumberAnimation {
-                duration: 220
-                easing.type: Easing.OutQuad
-            }
-        }
-
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 20
-            spacing: 20
-
-            Text {
-                text: "LoRa Messaging"
-                font.pixelSize: 28
-                color: "#A8C7E6"
-                Layout.alignment: Qt.AlignHCenter
-            }
-
-            ListView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                clip: true
-                model: lora.messages
-
-                delegate: Rectangle {
-                    width: parent.width
-                    height: 40
-                    color: index % 2 ? "#1F3A52" : "#112B3C"
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: modelData
-                        color: "#A8C7E6"
-                        font.pixelSize: 18
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 10
-
-                TextField {
-                    id: input
-                    Layout.fillWidth: true
-                    placeholderText: "Enter message..."
-                    color: "white"
-                    onActiveFocusChanged: {
-                        keyboard.active = activeFocus
-                    }
-                    onPressed: {
-                        keyboard.active = true
-                    }
-                }
-
-                Button {
-                    text: "Send"
-                    onClicked: {
-                        if (input.text.length > 0) {
-                            lora.sendMessage(input.text)
-                            input.text = ""
-                        }
-                        keyboard.active = false
-                        input.focus = false
-                    }
-                }
-            }
-
-            RowLayout {
-                Layout.alignment: Qt.AlignHCenter
-                spacing: 12
-
-                Button {
-                    text: "Back"
-                    onClicked: nav.pop()
-                }
-
-                Button {
-                    text: keyboard.active ? "Hide keyboard" : "Show keyboard"
-                    onClicked: {
-                        keyboard.active = !keyboard.active
-                        if (keyboard.active) {
-                            input.forceActiveFocus()
-                        } else {
-                            input.focus = false
-                        }
-                    }
-                }
-            }
-        }
+        lora.sendMessage(input.text.trim());
+        input.text = "";
     }
 
-    InputPanel {
-        id: keyboard
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        visible: active
-        active: false
-        z: 100
-        onActiveChanged: {
-            if (!active) {
-                input.focus = false
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 20
+        spacing: 20
+
+        Text {
+            text: "LoRa Messaging"
+            font.pixelSize: 28
+            color: "#A8C7E6"
+            Layout.alignment: Qt.AlignHCenter
+        }
+
+        Rectangle {
+            id: chatPanel
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "#1C4A6B"
+            radius: 12
+            border.color: "#6FA8DC"
+            border.width: 2
+
+            ListView {
+                id: messageList
+                anchors.fill: parent
+                anchors.margins: 10
+                clip: true
+                model: lora && lora.messages ? lora.messages : []
+                spacing: 8
+
+                onCountChanged: {
+                    if (count > 0)
+                        positionViewAtEnd()
+                }
+
+                delegate: Item {
+                    width: messageList.width
+                    height: Math.max(44, bubbleText.contentHeight + 18)
+
+                    property bool isSent: modelData ? String(modelData).indexOf("TX:") === 0 : false
+                    property string displayText: modelData
+                        ? (String(modelData).indexOf("TX:") === 0
+                           ? String(modelData).substring(4)
+                           : (String(modelData).indexOf("RX:") === 0 ? String(modelData).substring(4) : String(modelData)))
+                        : ""
+
+                    Rectangle {
+                        id: leftBubble
+                        visible: !parent.isSent
+                        anchors.left: parent.left
+                        anchors.top: parent.top
+                        anchors.margins: 4
+                        color: "#2C5D7F"
+                        radius: 10
+                        border.color: "#8DB8E6"
+                        border.width: 1
+                        width: Math.min(parent.width * 0.78, bubbleText.contentWidth + 24)
+                        height: bubbleText.contentHeight + 12
+
+                        Text {
+                            id: bubbleText
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            text: parent.displayText
+                            color: "#A8C7E6"
+                            font.pixelSize: 18
+                            wrapMode: Text.Wrap
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                    }
+
+                    Rectangle {
+                        id: rightBubble
+                        visible: parent.isSent
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.margins: 4
+                        color: "#3C7FB5"
+                        radius: 10
+                        border.color: "#A9D0FF"
+                        border.width: 1
+                        width: Math.min(parent.width * 0.78, bubbleTextSent.contentWidth + 24)
+                        height: bubbleTextSent.contentHeight + 12
+
+                        Text {
+                            id: bubbleTextSent
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            text: parent.displayText
+                            color: "white"
+                            font.pixelSize: 18
+                            wrapMode: Text.Wrap
+                            horizontalAlignment: Text.AlignRight
+                        }
+                    }
+                }
             }
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
+
+            TextField {
+                id: input
+                Layout.fillWidth: true
+                placeholderText: "Enter message..."
+                color: "white"
+                onAccepted: root.sendCurrentMessage()
+            }
+
+            Button {
+                text: "Send"
+                onClicked: root.sendCurrentMessage()
+            }
+        }
+
+        Button {
+            text: "Back"
+            Layout.alignment: Qt.AlignHCenter
+            onClicked: stack.pop()
         }
     }
 }

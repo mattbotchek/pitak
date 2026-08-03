@@ -1,9 +1,14 @@
 #include "sx126x.h"
 #include <pigpio.h>
+#include <algorithm>
 #include <iostream>
 #include <cstring>
 
+#define M0 22
+#define M1 27
+
 SX126X::SX126X(const std::string &serialDev, int baud)
+    : fd(-1)
 {
     if (gpioInitialise() < 0) {
         std::cerr << "pigpio init failed\n";
@@ -11,15 +16,17 @@ SX126X::SX126X(const std::string &serialDev, int baud)
         return;
     }
 
-    gpioSetMode(22, PI_OUTPUT);
-    gpioSetMode(27, PI_OUTPUT);
+    gpioSetMode(M0, PI_OUTPUT);
+    gpioSetMode(M1, PI_OUTPUT);
 
-    gpioWrite(22, 0);
-    gpioWrite(27, 0);
+    gpioWrite(M0, 0);
+    gpioWrite(M1, 0);
 
-    fd = serOpen((char*)serialDev.c_str(), baud, 0);
+    fd = serOpen(const_cast<char*>(serialDev.c_str()), baud, 0);
     if (fd < 0) {
         std::cerr << "UART open failed\n";
+        gpioTerminate();
+        fd = -1;
     }
 }
 
@@ -32,13 +39,10 @@ SX126X::~SX126X() {
 void SX126X::send(const std::string &data) {
     if (fd < 0) return;
 
-    char buf[256];
-    size_t len = std::min(data.size(), sizeof(buf)-1);
-
-    memcpy(buf, data.c_str(), len);
-    buf[len] = '\0';
-
-    serWrite(fd, buf, len);
+    int len = static_cast<int>(std::min<size_t>(data.size(), 255));
+    char tmp[256];
+    memcpy(tmp, data.c_str(), len);
+    serWrite(fd, tmp, len);
 }
 
 bool SX126X::available() {
@@ -47,11 +51,17 @@ bool SX126X::available() {
 }
 
 int SX126X::receive(uint8_t *buf, int maxLen) {
-    if (fd < 0) return -1;
+    if (fd < 0 || maxLen <= 0)
+        return -1;
 
-    int n = serRead(fd, (char*)buf, maxLen - 1);
-    if (n > 0)
+    int avail = serDataAvailable(fd);
+    if (avail <= 0)
+        return 0;
+
+    int toRead = std::min(avail, maxLen - 1);
+    int n = serRead(fd, reinterpret_cast<char*>(buf), toRead);
+    if (n > 0) {
         buf[n] = '\0';
-
+    }
     return n;
 }

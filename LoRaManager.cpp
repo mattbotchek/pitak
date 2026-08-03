@@ -17,9 +17,26 @@ LoRaManager::LoRaManager(QObject *parent)
         int n = radio->receive(buf, sizeof(buf));
 
         if (n > 0) {
-            QString msg = QString::fromUtf8((char*)buf, n);
-            appendMessage("RX: " + msg);
-            qDebug() << "RX RAW:" << QByteArray((char*)buf, n).toHex();
+            m_rxBuffer.append(reinterpret_cast<const char*>(buf), n);
+
+            while (m_rxBuffer.contains('\n')) {
+                int newlinePos = m_rxBuffer.indexOf('\n');
+                QByteArray line = m_rxBuffer.left(newlinePos);
+                m_rxBuffer.remove(0, newlinePos + 1);
+
+                if (line.isEmpty())
+                    continue;
+
+                QString msg = QString::fromUtf8(line).trimmed();
+                if (!msg.isEmpty()) {
+                    appendMessage("RX: " + msg);
+                    qDebug() << "RX:" << msg;
+                }
+            }
+
+            if (m_rxBuffer.size() > 1024) {
+                m_rxBuffer.clear();
+            }
         }
     });
 
@@ -27,7 +44,15 @@ LoRaManager::LoRaManager(QObject *parent)
 }
 
 void LoRaManager::sendMessage(const QString &msg) {
-    radio->send(msg.toStdString());
+    if (msg.isEmpty())
+        return;
+
+    std::string payload = msg.toStdString();
+    if (!payload.empty() && payload.back() != '\n') {
+        payload.push_back('\n');
+    }
+
+    radio->send(payload);
     appendMessage("TX: " + msg);
 }
 
