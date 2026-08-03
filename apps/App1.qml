@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.VirtualKeyboard 2.15
 
 Rectangle {
     id: root
@@ -12,63 +13,119 @@ Rectangle {
     property var lora
     property var stack
 
-    ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
+    Item {
+        id: contentHost
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: parent.height
+        y: keyboard.active ? -Math.min(260, keyboard.height - 40) : 0
 
-        Text {
-            text: "LoRa Messaging"
-            font.pixelSize: 28
-            color: "#A8C7E6"
-            Layout.alignment: Qt.AlignHCenter
+        Behavior on y {
+            NumberAnimation {
+                duration: 220
+                easing.type: Easing.OutQuad
+            }
         }
 
-        ListView {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            model: lora.messages
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 20
+            spacing: 20
 
-            delegate: Rectangle {
-                width: parent.width
-                height: 40
-                color: index % 2 ? "#1F3A52" : "#112B3C"
+            Text {
+                text: "LoRa Messaging"
+                font.pixelSize: 28
+                color: "#A8C7E6"
+                Layout.alignment: Qt.AlignHCenter
+            }
 
-                Text {
-                    anchors.centerIn: parent
-                    text: modelData
-                    color: "#A8C7E6"
-                    font.pixelSize: 18
+            ListView {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                model: lora.messages
+
+                delegate: Rectangle {
+                    width: parent.width
+                    height: 40
+                    color: index % 2 ? "#1F3A52" : "#112B3C"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: modelData
+                        color: "#A8C7E6"
+                        font.pixelSize: 18
+                    }
                 }
             }
-        }
 
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: 10
-
-            TextField {
-                id: input
+            RowLayout {
                 Layout.fillWidth: true
-                placeholderText: "Enter message..."
-                color: "white"
+                spacing: 10
+
+                TextField {
+                    id: input
+                    Layout.fillWidth: true
+                    placeholderText: "Enter message..."
+                    color: "white"
+                    onActiveFocusChanged: {
+                        keyboard.active = activeFocus
+                    }
+                    onPressed: {
+                        keyboard.active = true
+                    }
+                }
+
+                Button {
+                    text: "Send"
+                    onClicked: {
+                        if (input.text.length > 0) {
+                            lora.sendMessage(input.text)
+                            input.text = ""
+                        }
+                        keyboard.active = false
+                        input.focus = false
+                    }
+                }
             }
 
-            Button {
-                text: "Send"
-                onClicked: {
-                    if (input.text.length > 0) {
-                        lora.sendMessage(input.text)
-                        input.text = ""
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 12
+
+                Button {
+                    text: "Back"
+                    onClicked: nav.pop()
+                }
+
+                Button {
+                    text: keyboard.active ? "Hide keyboard" : "Show keyboard"
+                    onClicked: {
+                        keyboard.active = !keyboard.active
+                        if (keyboard.active) {
+                            input.forceActiveFocus()
+                        } else {
+                            input.focus = false
+                        }
                     }
                 }
             }
         }
+    }
 
-        Button {
-            text: "Back"
-            Layout.alignment: Qt.AlignHCenter
-            onClicked: nav.pop()
+    InputPanel {
+        id: keyboard
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        visible: active
+        active: false
+        z: 100
+        onActiveChanged: {
+            if (!active) {
+                input.focus = false
+            }
         }
     }
 }

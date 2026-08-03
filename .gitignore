@@ -22,3 +22,6 @@ _deps/
 *.user
 .idea/
 .vscode/
+
+#ignore user created .env files
+.env
