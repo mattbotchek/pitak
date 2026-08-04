@@ -1,37 +1,60 @@
 cmake_minimum_required(VERSION 3.16)
 project(PiTAK LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS 
-    Quick 
-    Qml
-)
+option(PITAK_BUILD_APP "Build the PiTAK appliance application" ON)
+option(PITAK_BUILD_TESTS "Build PiTAK unit tests" OFF)
 
-find_library(PIGPIO_LIBRARY NAMES pigpio libpigpio)
-if(NOT PIGPIO_LIBRARY)
-    find_library(PIGPIOD_IF2_LIBRARY NAMES pigpiod_if2 libpigpiod_if2)
-    if(NOT PIGPIOD_IF2_LIBRARY)
-        message(FATAL_ERROR "Could not find a pigpio library (tried pigpio and pigpiod_if2)")
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+
+if(PITAK_BUILD_APP)
+    find_package(Qt6 REQUIRED COMPONENTS Quick Qml Sql)
+    find_path(PIGPIO_INCLUDE_DIR pigpio.h REQUIRED)
+    find_library(PIGPIO_LIBRARY NAMES pigpio libpigpio)
+    if(NOT PIGPIO_LIBRARY)
+        message(FATAL_ERROR "Could not find the pigpio library")
     endif()
-    set(PIGPIO_LINK_LIBRARY ${PIGPIOD_IF2_LIBRARY})
-else()
-    set(PIGPIO_LINK_LIBRARY ${PIGPIO_LIBRARY})
+
+    add_executable(pitak
+        main.cpp
+        sx126x.cpp
+        LoRaManager.cpp
+        SecureProtocol.cpp
+        PiTakStore.cpp
+        PiSatPage.cpp
+        pitak.qrc
+    )
+
+    target_link_libraries(pitak PRIVATE
+        Qt6::Quick
+        Qt6::Qml
+        Qt6::Sql
+        OpenSSL::Crypto
+        ${PIGPIO_LIBRARY}
+    )
+    target_include_directories(pitak PRIVATE ${PIGPIO_INCLUDE_DIR})
+    if(UNIX)
+        find_package(Threads REQUIRED)
+        find_library(RT_LIBRARY rt REQUIRED)
+        target_link_libraries(pitak PRIVATE Threads::Threads ${RT_LIBRARY})
+    endif()
 endif()
 
-add_executable(pitak
-    main.cpp
-    sx126x.cpp
-    LoRaManager.cpp
-    pitak.qrc
-)
-
-target_link_libraries(pitak PRIVATE
-    Qt6::Quick
-    Qt6::Qml
-    ${PIGPIO_LINK_LIBRARY}
-    rt
-    pthread
-)
+if(PITAK_BUILD_TESTS)
+    enable_testing()
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    add_executable(secure_protocol_tests
+        tests/SecureProtocolTests.cpp
+        SecureProtocol.cpp
+        PiSatPage.cpp
+    )
+    target_include_directories(secure_protocol_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_link_libraries(secure_protocol_tests PRIVATE Qt6::Core Qt6::Test OpenSSL::Crypto)
+    add_test(NAME secure_protocol_tests COMMAND secure_protocol_tests)
+endif()

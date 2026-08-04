@@ -25,3 +25,6 @@ _deps/
 
 #ignore user created .env files
 .env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

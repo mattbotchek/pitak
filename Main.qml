@@ -1,11 +1,12 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 
 ApplicationWindow {
     id: root
     visible: true
-    visibility: "FullScreen"
+    visibility: Window.FullScreen
     title: "PiTAK"
 
     property alias nav: stack
@@ -124,9 +125,12 @@ ApplicationWindow {
 
                         Text {
                             anchors.centerIn: parent
-                            text: "App " + (index + 1)
+                            text: ["Peers", "PiSAT Control", "Live Telemetry", "Sessions", "App 5", "App 6"][index]
                             color: "#A8C7E6"
                             font.pixelSize: 22
+                            horizontalAlignment: Text.AlignHCenter
+                            wrapMode: Text.Wrap
+                            width: parent.width - 16
                         }
 
                         MouseArea {
@@ -136,11 +140,11 @@ ApplicationWindow {
                                 if (index === 0) {
                                     stack.push(Qt.resolvedUrl("qrc:/apps/App1.qml"), { "lora": lora, "stack": stack })
                                 } else if (index === 1) {
-                                    stack.push(Qt.resolvedUrl("qrc:/apps/App2.qml"), { "stack": stack })
+                                    stack.push(Qt.resolvedUrl("qrc:/apps/App2.qml"), { "lora": lora, "stack": stack })
                                 } else if (index === 2) {
-                                    stack.push(Qt.resolvedUrl("qrc:/apps/App3.qml"), { "stack": stack })
+                                    stack.push(Qt.resolvedUrl("qrc:/apps/App3.qml"), { "lora": lora, "stack": stack })
                                 } else if (index === 3) {
-                                    stack.push(Qt.resolvedUrl("qrc:/apps/App4.qml"), { "stack": stack })
+                                    stack.push(Qt.resolvedUrl("qrc:/apps/App4.qml"), { "lora": lora, "stack": stack })
                                 } else if (index === 4) {
                                     stack.push(Qt.resolvedUrl("qrc:/apps/App5.qml"), { "stack": stack })
                                 } else if (index === 5) {

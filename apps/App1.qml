@@ -4,121 +4,82 @@ import QtQuick.Layouts
 
 Rectangle {
     id: root
-    width: parent ? parent.width : 800
-    height: parent ? parent.height : 480
     color: "#0A1E2F"
-    opacity: 0.85
-
     property var lora
     property var stack
 
-    function sendCurrentMessage() {
-        if (!lora || !input.text || input.text.trim().length === 0)
-            return;
-
-        lora.sendMessage(input.text.trim());
-        input.text = "";
+    function sendMessage() {
+        if (lora && input.text.trim().length > 0) {
+            lora.sendPeerMessage(input.text)
+            input.clear()
+        }
     }
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 20
-        spacing: 20
+        anchors.margins: 18
+        spacing: 12
 
+        Text { text: "Peer Discovery + Messaging"; color: "#A8C7E6"; font.pixelSize: 27; font.bold: true }
         Text {
-            text: "LoRa Messaging"
-            font.pixelSize: 28
-            color: "#A8C7E6"
-            Layout.alignment: Qt.AlignHCenter
+            text: lora ? lora.securityStatus : "LoRa unavailable"
+            color: text.indexOf("enabled") >= 0 ? "#7ED6A5" : "#FFB36B"
+            textFormat: Text.PlainText
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            Text { text: "Compatible peer:"; color: "#A8C7E6" }
+            ComboBox {
+                id: peerBox
+                Layout.fillWidth: true
+                model: lora ? lora.peers : []
+                textRole: "name"
+                valueRole: "id"
+                delegate: ItemDelegate {
+                    width: peerBox.width
+                    enabled: modelData.compatible
+                    text: (modelData.name || modelData.id) + "  [" + modelData.id + "]" +
+                          (modelData.compatible ? "" : " (incompatible)")
+                }
+                onActivated: lora.setSelectedPeer(currentValue)
+            }
+            Text {
+                text: lora && lora.selectedPeer ? "Online" : "Select a peer"
+                color: lora && lora.selectedPeer ? "#7ED6A5" : "#A8C7E6"
+            }
         }
 
         Rectangle {
-            id: chatPanel
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#1C4A6B"
-            radius: 12
-            border.color: "#6FA8DC"
-            border.width: 2
+            color: "#112B3C"
+            radius: 10
+            border.color: "#4A90E2"
 
             ListView {
                 id: messageList
                 anchors.fill: parent
                 anchors.margins: 10
-                clip: true
-                model: lora && lora.messages ? lora.messages : []
                 spacing: 8
-
-                onCountChanged: {
-                    if (count > 0)
-                        positionViewAtEnd()
-                }
-
-                delegate: Item {
+                clip: true
+                model: lora ? lora.messages : []
+                onCountChanged: if (count) positionViewAtEnd()
+                delegate: Rectangle {
+                    required property var modelData
                     width: messageList.width
-                    height: Math.max(44, bubbleText.contentHeight + 18)
-
-                    property bool isSent: modelData ? String(modelData).indexOf("TX:") === 0 : false
-                    property string displayText: modelData
-                        ? (String(modelData).indexOf("TX:") === 0
-                           ? String(modelData).substring(4)
-                           : (String(modelData).indexOf("RX:") === 0 ? String(modelData).substring(4) : String(modelData)))
-                        : ""
-
-                    Rectangle {
-                        id: leftBubble
-                        visible: !parent.isSent
-                        anchors.left: parent.left
-                        anchors.top: parent.top
-                        anchors.margins: 4
-                        color: "#2C5D7F"
-                        radius: 10
-                        border.color: "#8DB8E6"
-                        border.width: 1
-                        width: Math.min(parent.width * 0.78, bubbleText.contentWidth + 24)
-                        height: bubbleText.contentHeight + 12
-
-                        Text {
-                            id: bubbleText
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            text: parent.displayText
-                            color: "#A8C7E6"
-                            font.pixelSize: 18
-                            wrapMode: Text.Wrap
-                            horizontalAlignment: Text.AlignLeft
-                        }
-                    }
-
-                    Rectangle {
-                        id: rightBubble
-                        visible: parent.isSent
-                        anchors.right: parent.right
-                        anchors.top: parent.top
-                        anchors.margins: 4
-                        color: "#3C7FB5"
-                        radius: 10
-                        border.color: "#A9D0FF"
-                        border.width: 1
-                        width: Math.min(parent.width * 0.78, bubbleTextSent.contentWidth + 24)
-                        height: bubbleTextSent.contentHeight + 12
-
-                        Text {
-                            id: bubbleTextSent
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            anchors.leftMargin: 12
-                            anchors.rightMargin: 12
-                            text: parent.displayText
-                            color: "white"
-                            font.pixelSize: 18
-                            wrapMode: Text.Wrap
-                            horizontalAlignment: Text.AlignRight
-                        }
+                    height: messageText.implicitHeight + 18
+                    radius: 8
+                    color: modelData.direction === "sent" ? "#1F3A52" : "#173D55"
+                    border.color: "#4A90E2"
+                    Text {
+                        id: messageText
+                        anchors.fill: parent
+                        anchors.margins: 9
+                        text: modelData.time + "  " + modelData.name + ": " + modelData.text
+                        color: "#A8C7E6"
+                        wrapMode: Text.Wrap
+                        textFormat: Text.PlainText
                     }
                 }
             }
@@ -126,26 +87,16 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 10
-
             TextField {
                 id: input
                 Layout.fillWidth: true
-                placeholderText: "Enter message..."
-                color: "white"
-                onAccepted: root.sendCurrentMessage()
+                maximumLength: 160
+                placeholderText: "Message (up to 160; radio-sized automatically)"
+                enabled: lora && lora.selectedPeer
+                onAccepted: root.sendMessage()
             }
-
-            Button {
-                text: "Send"
-                onClicked: root.sendCurrentMessage()
-            }
-        }
-
-        Button {
-            text: "Back"
-            Layout.alignment: Qt.AlignHCenter
-            onClicked: stack.pop()
+            Button { text: "Send"; enabled: input.enabled && input.text.length > 0; onClicked: root.sendMessage() }
+            Button { text: "Back"; onClicked: stack.pop() }
         }
     }
 }

@@ -1,26 +1,62 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 
 Rectangle {
-    id: root
-    width: parent ? parent.width : 800
-    height: parent ? parent.height : 480
-    color: "transparent"
+    color: "#0A1E2F"
+    property var lora
+    property var stack
 
-    property var stack   // always present
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.margins: 22
+        spacing: 16
 
-    Text {
-        text: "App 2 Placeholder"
-        anchors.centerIn: parent
-        color: "#A8C7E6"
-        font.pixelSize: 32
-    }
+        Text { text: "PiSAT Control Panel"; color: "#A8C7E6"; font.pixelSize: 28; font.bold: true }
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: 92
+            radius: 10
+            color: "#112B3C"
+            border.color: "#4A90E2"
+            Column {
+                anchors.fill: parent; anchors.margins: 12; spacing: 7
+                Text { text: lora ? lora.securityStatus : "Unavailable"; color: "#A8C7E6"; textFormat: Text.PlainText }
+                Text { text: lora ? lora.pisatStatus : "Unavailable"; color: "#7ED6A5"; textFormat: Text.PlainText; wrapMode: Text.Wrap }
+            }
+        }
+        Button { text: "Refresh Authenticated Status"; onClicked: lora.requestStatus() }
 
-    Button {
-        text: "Back"
-        anchors.bottom: parent.bottom
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottomMargin: 30
-        onClicked: nav.pop()
+        GroupBox {
+            title: "Monitor"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 88
+            label: Text { text: "Monitor"; color: "#A8C7E6"; font.bold: true }
+            background: Rectangle { color: "#112B3C"; radius: 10; border.color: "#4A90E2" }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                TextField { id: channel; Layout.fillWidth: true; placeholderText: "Channel"; text: "1" }
+                Button { text: "Monitor ON"; onClicked: lora.setMonitor(true, channel.text) }
+                Button { text: "Monitor OFF"; onClicked: lora.setMonitor(false, channel.text) }
+            }
+        }
+
+        GroupBox {
+            title: "Capture"
+            Layout.fillWidth: true
+            Layout.preferredHeight: 88
+            label: Text { text: "Capture"; color: "#A8C7E6"; font.bold: true }
+            background: Rectangle { color: "#112B3C"; radius: 10; border.color: "#4A90E2" }
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 8
+                ComboBox { id: captureTool; model: ["tcpdump", "airodump", "wireshark"]; Layout.fillWidth: true }
+                Button { text: "START"; onClicked: lora.startCapture(captureTool.currentText) }
+                Button { text: "STOP"; onClicked: lora.stopCapture() }
+            }
+        }
+        Item { Layout.fillHeight: true }
+        Button { text: "Back"; Layout.alignment: Qt.AlignHCenter; onClicked: stack.pop() }
     }
 }
