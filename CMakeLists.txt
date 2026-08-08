@@ -15,10 +15,12 @@ find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 
 if(PITAK_BUILD_APP)
     find_package(Qt6 REQUIRED COMPONENTS Quick Qml Sql)
-    find_path(PIGPIO_INCLUDE_DIR pigpio.h REQUIRED)
-    find_library(PIGPIO_LIBRARY NAMES pigpio libpigpio)
-    if(NOT PIGPIO_LIBRARY)
-        message(FATAL_ERROR "Could not find the pigpio library")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        find_path(PIGPIO_INCLUDE_DIR pigpio.h REQUIRED)
+        find_library(PIGPIO_LIBRARY NAMES pigpio libpigpio)
+        if(NOT PIGPIO_LIBRARY)
+            message(FATAL_ERROR "Could not find the pigpio library")
+        endif()
     endif()
 
     add_executable(pitak
@@ -36,9 +38,11 @@ if(PITAK_BUILD_APP)
         Qt6::Qml
         Qt6::Sql
         OpenSSL::Crypto
-        ${PIGPIO_LIBRARY}
     )
-    target_include_directories(pitak PRIVATE ${PIGPIO_INCLUDE_DIR})
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_link_libraries(pitak PRIVATE ${PIGPIO_LIBRARY})
+        target_include_directories(pitak PRIVATE ${PIGPIO_INCLUDE_DIR})
+    endif()
     if(UNIX)
         find_package(Threads REQUIRED)
         find_library(RT_LIBRARY rt REQUIRED)
